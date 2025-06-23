@@ -43,36 +43,63 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     fetchMessages();
 
-    // 🔌 Socket bağlantısını kur
-    //SocketService().connect(widget.currentUser.id);
-
-    // 📥 Gelen mesajları dinle
-    SocketService().onMessageReceived((data) {
-      print('📥 [${widget.currentUser.name}] Gelen mesaj verisi: $data');
-
+    // 🔌 Gelen mesajları dinle
+    SocketService().onMessageReceived((data) async {
       final incoming = MessageModel.fromJson(data);
 
-      if ((incoming.from == widget.chatWith.id &&
-              incoming.to == widget.currentUser.id) ||
+      final isIncoming =
+          incoming.from == widget.chatWith.id &&
+          incoming.to == widget.currentUser.id;
+
+      final isRelevant =
+          isIncoming ||
           (incoming.to == widget.chatWith.id &&
-              incoming.from == widget.currentUser.id)) {
-        print('✅ Mesaj bu sohbete ait. Listeye ekleniyor');
+              incoming.from == widget.currentUser.id);
+
+      if (isRelevant) {
+        // 🔔 Gelen mesaj sana aitse, anında okundu yap
+        if (isIncoming) {
+          try {
+            await MessageService.markAsRead(incoming.from, incoming.to);
+            incoming.isRead = true;
+            incoming.readAt = DateTime.now(); // UI’da da gösterilmesi için
+          } catch (e) {
+            print('⛔️ Okundu işaretleme hatası: $e');
+          }
+        }
+
         setState(() {
           messages.add(incoming);
         });
+
         print('✅ [${widget.currentUser.name}] Mesaj listeye eklendi');
-      } else {
-        print('⛔️ [${widget.currentUser.name}] Bu mesaj başka bir sohbete ait');
       }
     });
   }
 
   Future<void> fetchMessages() async {
-    messages = await MessageService.getMessages(
-      widget.currentUser.id,
-      widget.chatWith.id,
-    );
-    setState(() => isLoading = false);
+    try {
+      messages = await MessageService.getMessages(
+        widget.currentUser.id,
+        widget.chatWith.id,
+      );
+
+      print('✅ [fetchMessages] Gelen mesaj sayısı: ${messages.length}');
+      for (var m in messages) {
+        print(m.toJson()); // 🧪 gelen veri formatı doğru mu kontrol et
+      }
+
+      for (final msg in messages) {
+        if (msg.to == widget.currentUser.id && !msg.isRead) {
+          await MessageService.markAsRead(msg.from, msg.to); // ✅
+          msg.isRead = true;
+        }
+      }
+
+      setState(() => isLoading = false);
+    } catch (e) {
+      print('⛔️ fetchMessages hata: $e');
+    }
   }
 
   Future<void> openFileUrl(String fileUrl) async {
@@ -140,6 +167,8 @@ class _ChatPageState extends State<ChatPage> {
       content: content,
       type: 'text',
       createdAt: DateTime.now(),
+      isRead: false,
+      readAt: null,
     );
 
     // 👉 Anında kendi ekranına ekle

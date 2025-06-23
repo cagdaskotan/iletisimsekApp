@@ -64,10 +64,14 @@ class MessageService {
     }
   }
 
-  static Future<void> markAsRead(String messageId) async {
-    final uri = Uri.parse('$baseUrl/read/$messageId');
+  static Future<void> markAsRead(String from, String to) async {
+    final uri = Uri.parse('$baseUrl/mark-as-read');
 
-    final res = await http.post(uri);
+    final res = await http.patch(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'from': from, 'to': to}),
+    );
 
     if (res.statusCode != 200) {
       throw Exception('Mesaj okunmuş olarak işaretlenemedi');

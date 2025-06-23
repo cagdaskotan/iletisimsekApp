@@ -35,6 +35,16 @@ class MessageListView extends StatelessWidget {
     return DateFormat('dd.MM.yyyy').format(date);
   }
 
+  Widget buildTickIcon(bool isRead) {
+    return Icon(
+      isRead ? Icons.done_all : Icons.check,
+      size: 16,
+      color: isRead
+          ? const Color.fromARGB(255, 253, 253, 253)
+          : Colors.grey[600],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color meBubbleColor = const Color.fromARGB(255, 86, 173, 255);
@@ -69,7 +79,6 @@ class MessageListView extends StatelessWidget {
             ),
           ),
         );
-
         lastDate = msgDate;
       }
 
@@ -173,13 +182,23 @@ class MessageListView extends StatelessWidget {
                   child: contentWidget,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  DateFormat('HH:mm').format(msgDate),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[700], // daha okunabilir
-                    fontStyle: FontStyle.italic,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      DateFormat('HH:mm').format(msgDate),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[700],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    if (isMe) ...[
+                      const SizedBox(width: 6),
+                      buildTickIcon(msg.isRead),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -191,7 +210,7 @@ class MessageListView extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       reverse: true,
-      children: items.reversed.toList(), // çünkü ListView.reverse kullanılıyor
+      children: items.reversed.toList(),
     );
   }
 }
